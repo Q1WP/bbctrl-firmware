@@ -60,8 +60,7 @@ module.exports = new Vue({
         feed: 0,        // Feed rate
         speed: 0,       // Programmed speed
         tool: 0         // Current tool
-      },
-      crosshair: cookie.get_bool('crosshair', false),
+      },      crosshair: cookie.get_bool('crosshair', false),
       selected_program: new Program(this.$api, cookie.get('selected-path')),
       active_program: undefined,
       errorTimeout: 30,
@@ -70,8 +69,6 @@ module.exports = new Vue({
       checkedUpgrade: false,
       latestVersion: '',
       webGLSupported: util.webgl_supported(),
-      // Track if we've initialized after connect
-      initialized: false,
       // Alert dismissal state (session-based, resets on browser close)
       upgrade_dismissed: sessionStorage.getItem('upgrade_dismissed') === 'true',
       service_dismissed: sessionStorage.getItem('service_dismissed') === 'true'
@@ -123,8 +120,7 @@ module.exports = new Vue({
       // Only auto-select first file if we have no selection
       if (!this.selected_program.path && value) {
         this.select_path(value)
-      }
-    },
+      }    },
 
 
     // Reset upgrade dismissal when version changes
@@ -171,16 +167,6 @@ module.exports = new Vue({
 
     async connected() {
       await this.update()
-      
-      // On initial connection, check if server has no active program
-      // and clear our cached selection to sync with server state
-      if (!this.initialized) {
-        this.initialized = true
-        if (!this.state.active_program) {
-          this.clear_selected_program()
-        }
-      }
-      
       this.parse_hash()
     },
 
@@ -258,8 +244,7 @@ module.exports = new Vue({
 
     camera_available() {
       // Only show camera if backend explicitly says it's available
-      return this.state.camera_available === true
-    }
+      return this.state.camera_available === true    }
   },
 
 
