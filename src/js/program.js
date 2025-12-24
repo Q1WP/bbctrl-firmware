@@ -35,27 +35,30 @@ class Program {
     this.path = path
     this.filename = util.display_path(path)
     this.progress = 0
-    // Track when program was created/refreshed for cache busting
+    // FIX: Initialize time for Vue 1.x reactivity
+    this.time = 0
+    // FIX: Track when program was created/refreshed for cache busting
     this.timestamp = Date.now()
   }
 
 
-  // Invalidate cached data so files are re-fetched from server
+  // FIX: Invalidate cached data so file is re-fetched
   invalidate() {
     this._load = null
     this._toolpath = null
     this._positions = null
     this._speeds = null
     this._view = null
-    // New timestamp ensures cache-busted URLs are unique
+    this.progress = 0
+    this.time = 0
     this.timestamp = Date.now()
   }
 
 
-  // Append cache-busting timestamp to URL
-  // This forces browser to fetch fresh data after invalidate()
+  // FIX: Add cache-busting parameter to prevent browser caching
   _cacheBust(url) {
-    return url + '?_t=' + this.timestamp
+    let separator = url.includes('?') ? '&' : '?'
+    return url + separator + '_t=' + this.timestamp
   }
 
 
@@ -118,8 +121,8 @@ class Program {
 
 
   load() {
-    // Cache the load promise so multiple callers get the same result
-    // Cache-busting via timestamp ensures fresh content after invalidate()
+    // Cache the promise so multiple callers get the same result
+    // Use invalidate() to clear cache when file is re-uploaded
     if (!this._load) {
       this._load = this.$api.get(this._cacheBust('fs/' + this.path), {type: 'text'})
     }

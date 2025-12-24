@@ -46,5 +46,4 @@
   // CodeMirror needs a fixed/constrained height to enable virtual scrolling
   // Without this, it renders ALL lines which freezes UI on large files
   .CodeMirror
-    flex 1
-    min-height 0  // Required for flex children to respect parent constraints
+    height calc(100vh - 200px)

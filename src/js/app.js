@@ -60,7 +60,8 @@ module.exports = new Vue({
         feed: 0,        // Feed rate
         speed: 0,       // Programmed speed
         tool: 0         // Current tool
-      },      crosshair: cookie.get_bool('crosshair', false),
+      },
+      crosshair: cookie.get_bool('crosshair', false),
       selected_program: new Program(this.$api, cookie.get('selected-path')),
       active_program: undefined,
       errorTimeout: 30,
@@ -69,9 +70,14 @@ module.exports = new Vue({
       checkedUpgrade: false,
       latestVersion: '',
       webGLSupported: util.webgl_supported(),
+      // Track if we've initialized after connect
+      initialized: false,
       // Alert dismissal state (session-based, resets on browser close)
       upgrade_dismissed: sessionStorage.getItem('upgrade_dismissed') === 'true',
-      service_dismissed: sessionStorage.getItem('service_dismissed') === 'true'
+      service_dismissed: sessionStorage.getItem('service_dismissed') === 'true',
+      // Fullscreen state
+      is_fullscreen: false
+
     }
   },
 
@@ -120,7 +126,8 @@ module.exports = new Vue({
       // Only auto-select first file if we have no selection
       if (!this.selected_program.path && value) {
         this.select_path(value)
-      }    },
+      }
+    },
 
 
     // Reset upgrade dismissal when version changes
@@ -207,20 +214,18 @@ module.exports = new Vue({
 
     // Dynamic header for GCode messages modal showing spindle speed
     // Shows real-time spindle speed during M0 pause when tool is configured
-    popupMessagesHeader() {
+     popupMessagesHeader() {
       let header = 'GCode Messages'
-      
+
       // Show spindle speed when tool is configured (not Disabled)
-      // Always show RPM so user can watch spindle spin up in real-time
+      // NOTE: Access state.s unconditionally for Vue 1.x reactivity tracking
       let toolType = this.config.tool && this.config.tool['tool-type']
-      if (toolType && toolType !== 'Disabled') {
-        // Backend may send 'nan' string, so use parseFloat to handle it
-        let speed = parseFloat(this.state.s)
-        if (!isNaN(speed)) {
-          header += ' - Spindle: ' + Math.round(speed) + ' RPM'
-        }
+      let speed = parseFloat(this.state.s)
+
+      if (toolType && toolType !== 'Disabled' && !isNaN(speed)) {
+        header += ' - ' + Math.round(speed) + ' RPM'
       }
-      
+
       return header
     },
 
@@ -243,8 +248,10 @@ module.exports = new Vue({
 
 
     camera_available() {
-      // Only show camera if backend explicitly says it's available
-      return this.state.camera_available === true    }
+      // Use state from backend, default to true if not yet received
+      return this.state.camera_available !== false
+
+    }
   },
 
 
@@ -274,6 +281,11 @@ module.exports = new Vue({
     }
 
     this.check_login()
+
+    // Listen for fullscreen changes (e.g., user presses Escape)
+    document.addEventListener('fullscreenchange', () => {
+      this.is_fullscreen = !!document.fullscreenElement
+    })
   },
 
 
@@ -508,6 +520,23 @@ module.exports = new Vue({
     view(path) {
       this.select_path(path)
       location.hash = 'viewer'
+    },
+
+
+    toggle_fullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          this.is_fullscreen = true
+        }).catch(err => {
+          console.warn('Fullscreen request failed:', err)
+        })
+      } else {
+        document.exitFullscreen().then(() => {
+          this.is_fullscreen = false
+        }).catch(err => {
+          console.warn('Exit fullscreen failed:', err)
+        })
+      }
     }
   }
 })
