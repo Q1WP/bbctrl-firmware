@@ -322,6 +322,17 @@ class Planner():
         self.current_plan_time = 0
 
 
+    def _update_modal_state(self):
+        """Update frontend with planner's modal state (units, distance mode, etc.)"""
+        if self.planner is None:
+            return
+        try:
+            modal = self.planner.get_modal_state()
+            self.ctrl.state.set('distance_mode', modal.get('distance_mode', 90))
+        except Exception as e:
+            self.log.warning('Failed to get modal state: %s' % e)
+
+
     def close(self):
         # Release planner callbacks
         if self.planner is not None:
@@ -345,7 +356,14 @@ class Planner():
 
 
     def _end_program(self, msg = None, end_all = False):
-        self.ctrl.state.set('active_program', None)
+        # Update modal state (distance mode, units, etc.) after program completes
+        self._update_modal_state()
+
+        # FIX: Check if this was a macro - if so, restore previous program
+        # Otherwise, just clear active_program as before
+        if not self.ctrl.state.end_macro():
+            # Not a macro, clear active_program normally
+            self.ctrl.state.set('active_program', None)
 
         if end_all:
             while len(self.end_callbacks):
