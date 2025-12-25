@@ -334,6 +334,7 @@ module.exports = {
           }
         }
         
+
         // Check if confirmation is required (default: true for safety)
         let requiresConfirm = macroConfig.confirm !== false
         
