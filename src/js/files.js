@@ -51,7 +51,7 @@ module.exports = {
       selected: -1,
       filename: '',
       folder: '',
-      show_locations: false
+      location_menu_open: false
     }
   },
 
@@ -129,7 +129,22 @@ module.exports = {
   },
 
 
-  ready() {this.load('')},
+  ready() {
+    this.load('')
+    
+    // Close location menu when clicking outside
+    this._closeLocationMenu = (e) => {
+      if (!this.$el.querySelector('.location-dropdown').contains(e.target)) {
+        this.location_menu_open = false
+      }
+    }
+    document.addEventListener('click', this._closeLocationMenu)
+  },
+  
+  
+  beforeDestroy() {
+    document.removeEventListener('click', this._closeLocationMenu)
+  },
 
 
   methods: {
@@ -137,6 +152,17 @@ module.exports = {
       if (name == 'Home')
         return 'Select files already on the controller.'
       return 'Select files from a USB drive.'
+    },
+
+
+    toggle_location_menu() {
+      this.location_menu_open = !this.location_menu_open
+    },
+
+
+    select_location(name) {
+      this.location_menu_open = false
+      this.open(name)
     },
 
 

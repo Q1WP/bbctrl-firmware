@@ -114,6 +114,7 @@ script#view-macros-template(type="text/x-template")
           .col-index #
           .col-visibility
             .fa.fa-eye(title="Visible")
+
           .col-tab Tab
           .col-color Color
           .col-name Name
@@ -135,6 +136,7 @@ script#view-macros-template(type="text/x-template")
               @change="toggle_visibility($index)",
               :title="is_visible(macro) ? 'Visible on control page' : 'Hidden from control page'")
           
+
           .col-tab
             select(@change="set_macro_tab($index, $event.target.value)",
               title="Assign macro to a tab")
@@ -212,7 +214,6 @@ script#view-macros-template(type="text/x-template")
           li Deleting a tab moves its macros to the first remaining tab
           li On the control page, click tab names to switch between macro groups
           li Tabs only appear on the control page when you have more than one
-
     //- Safety View
     .macros-content(v-if="view === 'safety'")
       h2 Macro Safety Settings
@@ -270,3 +271,4 @@ script#view-macros-template(type="text/x-template")
             When enabled, the macro can run even if axes have not been homed or
             zeroed. #[strong Use only for homing or setup macros] that establish
             position reference. Most macros should leave this disabled for safety.
+
