@@ -105,7 +105,7 @@ class State(object):
     def reset(self):
         # SAFETY: Clear active program on reset/boot
         # Prevents accidentally running last loaded file after power cycle
-                self.set('active_program', '')
+        self.set('active_program', '')
 
         # FIX: Also clear macro tracking state
         self._running_macro = False
