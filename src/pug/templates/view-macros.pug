@@ -109,7 +109,8 @@ script#view-macros-template(type="text/x-template")
           .col-actions
 
         .macro-row(v-for="macro in macros", :draggable="$root.authorized",
-          @dragstart="dragstart", @mousedown="mousedown", @drag="drag($index)",
+          @dragstart="dragstart($event)", @mousedown="mousedown",
+          @drag="drag($index, $event)",
           @dragover.prevent="", @drop.prevent="drop($index)")
           .col-grip
             .grip
@@ -175,8 +176,8 @@ script#view-macros-template(type="text/x-template")
 
       .tab-list(v-if="macro_tabs.length")
         .tab-row(v-for="tab in macro_tabs", :draggable="$root.authorized",
-          @dragstart="tab_dragstart", @mousedown="tab_mousedown",
-          @drag="tab_drag($index)", @dragover.prevent="",
+          @dragstart="tab_dragstart($event)", @mousedown="tab_mousedown",
+          @drag="tab_drag($index, $event)", @dragover.prevent="",
           @drop.prevent="tab_drop($index)")
           .grip
 

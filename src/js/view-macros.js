@@ -226,11 +226,12 @@ module.exports = {
 
 
     tab_dragstart(event) {
-      if (this.tabTarget.localName == 'input') event.preventDefault()
+      if (this.tabTarget && this.tabTarget.localName == 'input')
+        event.preventDefault()
     },
 
 
-    tab_drag(index) {
+    tab_drag(index, event) {
       this.draggingTab = index
       event.preventDefault()
     },
@@ -308,12 +309,14 @@ module.exports = {
 
 
     dragstart(event) {
-      if (this.target.localName == 'input' || this.target.localName == 'select')
+      if (this.target &&
+          (this.target.localName == 'input' ||
+           this.target.localName == 'select'))
         event.preventDefault()
     },
 
 
-    drag(index) {
+    drag(index, event) {
       this.dragging = index
       event.preventDefault()
     },
