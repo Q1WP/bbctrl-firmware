@@ -531,6 +531,16 @@
     }
   },
 
+  "macro_tabs": {
+    "type": "list",
+    "default": [{"id": "default", "name": "Macros"}],
+    "help": "Tabs for organizing macros on the control page.",
+    "template": {
+      "id": {"type": "string", "default": ""},
+      "name": {"type": "string", "default": "New Tab"}
+    }
+  },
+
   "macros": {
     "type": "list",
     "default": [],
@@ -538,6 +548,9 @@
       "name": {"type": "string", "default": ""},
       "path": {"type": "string", "default": ""},
       "color": {"type": "string", "default": "#e6e6e6"},
+      "tab": {"type": "string", "default": ""},
+      "visible": {"type": "bool", "default": true},
+      "confirm": {"type": "bool", "default": true},
       "skip_reference_check": {
         "type": "bool",
         "default": false,
