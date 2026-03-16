@@ -252,6 +252,12 @@
           "default": 5,
           "code": "zb",
           "hmodes": ["switch-min", "switch-max", "stall-min", "stall-max"]
+        },
+        "reference-required": {
+          "type": "enum",
+          "values": ["Auto", "Yes", "No"],
+          "help": "Require position reference before running macros. Auto = Yes for XYZ, No for ABC.",
+          "default": "Auto"
         }
       }
     }
@@ -531,7 +537,12 @@
     "template": {
       "name": {"type": "string", "default": ""},
       "path": {"type": "string", "default": ""},
-      "color": {"type": "string", "default": "#e6e6e6"}
+      "color": {"type": "string", "default": "#e6e6e6"},
+      "skip_reference_check": {
+        "type": "bool",
+        "default": false,
+        "help": "Allow setup and homing macros to run before axes are referenced."
+      }
     }
   }
 }
