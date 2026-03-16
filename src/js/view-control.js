@@ -42,6 +42,7 @@ module.exports = {
       jog_step: cookie.get_bool('jog-step'),
       jog_adjust: parseInt(cookie.get('jog-adjust', 2)),
       tab: 'auto',
+      macro_tab: undefined,
       highlighted_line: 0,
       toolpath: {}
     }
@@ -164,6 +165,42 @@ module.exports = {
       if (!this.toolpath.time || this.is_ready) return 0
       let p = this.plan_time / this.toolpath.time
       return p < 1 ? p : 1
+    },
+
+
+    macro_tabs() {
+      let tabs = this.config.macro_tabs
+      if (!tabs || !tabs.length) return [{id: 'default', name: 'Macros'}]
+      return tabs
+    },
+
+
+    current_macro_tab() {
+      if (this.macro_tab) return this.macro_tab
+      return this.macro_tabs.length ? this.macro_tabs[0].id : 'default'
+    },
+
+
+    visible_macros() {
+      let macros = this.config.macros || []
+      let current = this.current_macro_tab
+      let first = this.macro_tabs.length ? this.macro_tabs[0].id : 'default'
+      let visible = []
+
+      for (let i = 0; i < macros.length; i++) {
+        let macro = macros[i]
+        if (macro.visible === false) continue
+        if ((macro.tab || first) != current) continue
+
+        visible.push({
+          name: macro.name,
+          path: macro.path,
+          color: macro.color,
+          originalIndex: i
+        })
+      }
+
+      return visible
     }
   },
 
@@ -207,11 +244,39 @@ module.exports = {
     on_scroll(cm, e) {e.preventDefault()},
 
 
+    select_macro_tab(tabId) {this.macro_tab = tabId},
+
+
     async run_macro(macro) {
       try {
-        return this.$api.put('macro/' + macro)
+        let index = macro
+
+        if (typeof macro == 'object' && macro.originalIndex !== undefined)
+          index = macro.originalIndex
+
+        let macros = this.config.macros || []
+        if (index < 0 || index >= macros.length)
+          throw new Error('Invalid macro index: ' + index)
+
+        let config = macros[index]
+        if (config.confirm !== false) {
+          let name = config.name || ('Macro ' + (index + 1))
+          let result = await this.$root.open_dialog({
+            header: 'Confirm Macro',
+            icon: 'question',
+            body: 'Run macro "' + name + '"?\n\nFile: ' + config.path,
+            buttons: [
+              {text: 'Cancel'},
+              {text: 'Run', class: 'button-success', action: 'run'}
+            ]
+          })
+
+          if (result != 'run') return
+        }
+
+        return this.$api.put('macro/' + (index + 1))
       } catch (e) {
-        this.$root.error_dialog('Failed to run macro "' + macro + '":\n' + e)
+        this.$root.error_dialog('Failed to run macro:\n' + e)
       }
     },
 
