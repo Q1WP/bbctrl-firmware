@@ -81,12 +81,16 @@ module.exports = {
       if (this.modified && path[0] != 'macros') {
         cancel()
 
+        let authorized = this.$root.authorized
         let result = await this.$root.open_dialog({
-          header: 'Save changes?',
-          body: 'Changes to macros have not been saved. Would you like to ' +
-                'save them now?',
+          header: authorized ? 'Save changes?' : 'Login required',
+          body: authorized ?
+            'Changes to macros have not been saved. Would you like to save ' +
+            'them now?' :
+            'Changes to macros have not been saved. Log in to save them, ' +
+            'discard them, or stay on this page.',
           width: '320px',
-          buttons: [
+          buttons: authorized ? [
             {
               text: 'Cancel',
               title: 'Stay on the Macros page.'
@@ -98,14 +102,30 @@ module.exports = {
               title: 'Save changes.',
               class: 'button-success'
             }
+          ] : [
+            {
+              text: 'Cancel',
+              title: 'Stay on the Macros page.'
+            }, {
+              text: 'Discard',
+              title: 'Discard changes.'
+            }, {
+              text: 'Login',
+              title: 'Log in and save changes.',
+              class: 'button-success'
+            }
           ]
         })
 
         if (result == 'cancel') return
-        if (result == 'save') await this.save()
-        if (result == 'discard') await this.discard()
+        if (result == 'discard') {
+          await this.discard()
+          return location.hash = path.join(':')
+        }
 
-        location.hash = path.join(':')
+        if (result == 'save' || result == 'login') {
+          if (await this.save()) location.hash = path.join(':')
+        }
       }
     }
   },
@@ -117,7 +137,33 @@ module.exports = {
 
 
   methods: {
-    add_tab() {
+    async authorize() {
+      if (this.$root.authorized) return true
+      await this.$root.login()
+      return this.$root.authorized
+    },
+
+
+    get_error_message(error, fallback) {
+      let xhr = error && error.xhr
+
+      if (xhr && xhr.response && xhr.response.message)
+        return xhr.response.message
+
+      if (xhr && xhr.responseText) {
+        try {
+          let response = JSON.parse(xhr.responseText)
+          if (response && response.message) return response.message
+        } catch (e) {}
+      }
+
+      if (xhr && xhr.statusText) return xhr.statusText
+      return fallback
+    },
+
+
+    async add_tab() {
+      if (!await this.authorize()) return
       let id = 'tab_' + Date.now()
       this.macro_tabs.push({id: id, name: 'New Tab'})
       this.change()
@@ -125,6 +171,7 @@ module.exports = {
 
 
     async remove_tab(index) {
+      if (!await this.authorize()) return
       let tab = this.macro_tabs[index]
       if (!tab) return
 
@@ -190,6 +237,7 @@ module.exports = {
 
 
     tab_drop(index) {
+      if (!this.$root.authorized) return
       if (index == this.draggingTab) return
       let item = this.macro_tabs[this.draggingTab]
       this.macro_tabs.splice(this.draggingTab, 1)
@@ -198,7 +246,8 @@ module.exports = {
     },
 
 
-    add() {
+    async add() {
+      if (!await this.authorize()) return
       let tab = this.macro_tabs.length ? this.macro_tabs[0].id : 'default'
       this.macros.push({
         name: '',
@@ -217,7 +266,8 @@ module.exports = {
     },
 
 
-    toggle_visibility(index) {
+    async toggle_visibility(index) {
+      if (!await this.authorize()) return
       let macro = this.macros[index]
       if (!macro) return
       macro.visible = !this.is_visible(macro)
@@ -230,7 +280,8 @@ module.exports = {
     },
 
 
-    toggle_confirm(index) {
+    async toggle_confirm(index) {
+      if (!await this.authorize()) return
       let macro = this.macros[index]
       if (!macro) return
       macro.confirm = !this.requires_confirm(macro)
@@ -244,7 +295,8 @@ module.exports = {
     },
 
 
-    set_macro_tab(index, tabId) {
+    async set_macro_tab(index, tabId) {
+      if (!await this.authorize()) return
       let macro = this.macros[index]
       if (!macro) return
       macro.tab = tabId
@@ -268,6 +320,7 @@ module.exports = {
 
 
     drop(index) {
+      if (!this.$root.authorized) return
       if (index == this.dragging) return
       let item = this.macros[this.dragging]
       this.macros.splice(this.dragging, 1)
@@ -277,6 +330,7 @@ module.exports = {
 
 
     async remove(index) {
+      if (!await this.authorize()) return
       let macro = this.macros[index]
       let name = macro.name || ('Macro ' + (index + 1))
 
@@ -297,6 +351,7 @@ module.exports = {
 
 
     async open(index) {
+      if (!await this.authorize()) return
       let path = await this.$root.file_dialog()
       if (!path) return
       this.macros[index].path = util.display_path(path)
@@ -305,17 +360,47 @@ module.exports = {
 
 
     change() {
+      if (!this.$root.authorized) return
       this.modified = true
       this.$dispatch('input-changed')
     },
 
 
-    async save() {
+    async save(retry = true) {
+      if (!await this.authorize()) return false
+
       try {
-        await this.$api.put('config/save', this.config)
+        await this.$api.put('config/save', this.config, {error() {}})
         this.modified = false
+        return true
+
       } catch (error) {
-        this.$root.error_dialog('Failed to save: ' + error)
+        let xhr = error && error.xhr
+
+        if (xhr && xhr.status == 401) {
+          this.$root.authorized = false
+
+          if (retry) {
+            let result = await this.$root.open_dialog({
+              header: 'Login required',
+              body: 'Your login session expired. Log in to save macro ' +
+                    'changes.',
+              buttons: [
+                {text: 'Cancel'},
+                {text: 'Login', class: 'button-success'}
+              ]
+            })
+
+            if (result == 'login' && await this.authorize())
+              return this.save(false)
+          }
+
+          return false
+        }
+
+        await this.$root.error_dialog('Failed to save macro changes.\n' +
+          this.get_error_message(error, 'Unable to save configuration.'))
+        return false
       }
     },
 

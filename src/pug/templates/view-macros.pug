@@ -108,7 +108,7 @@ script#view-macros-template(type="text/x-template")
           .col-file File
           .col-actions
 
-        .macro-row(v-for="macro in macros", draggable="true",
+        .macro-row(v-for="macro in macros", :draggable="$root.authorized",
           @dragstart="dragstart", @mousedown="mousedown", @drag="drag($index)",
           @dragover.prevent="", @drop.prevent="drop($index)")
           .col-grip
@@ -119,36 +119,44 @@ script#view-macros-template(type="text/x-template")
           .col-visibility
             input(type="checkbox", :checked="is_visible(macro)",
               @change="toggle_visibility($index)",
+              :disabled="!$root.authorized",
               :title="is_visible(macro) ? 'Visible on control page' : 'Hidden from control page'")
 
           .col-tab
             select(@change="set_macro_tab($index, $event.target.value)",
+              :disabled="!$root.authorized",
               title="Assign macro to a tab")
               option(v-for="tab in macro_tabs", :value="tab.id",
                 :selected="get_macro_tab(macro) == tab.id") {{tab.name}}
 
           .col-color
-            color-picker(:value.sync="macro.color", @change="change",
+            color-picker(:value.sync="macro.color", :disabled="!$root.authorized",
+              @change="change",
               title="Set the macro button color.")
 
           .col-name
             input.name(@change="change", v-model="macro.name",
+              :disabled="!$root.authorized",
               title="Set the macro button name.", placeholder="Button name")
 
           .col-file
             input.path(@click="open($index)", :value="macro.path", readonly,
+              :disabled="!$root.authorized",
               title="Select the macro file",
               placeholder="Click to select file...")
 
           .col-actions
             .fa.fa-folder-open(@click="open($index)",
+              :class="{disabled: !$root.authorized}",
               title="Select the macro file.")
-            .fa.fa-trash(@click="remove($index)", title="Delete this macro")
+            .fa.fa-trash(@click="remove($index)", :class="{disabled: !$root.authorized}",
+              title="Delete this macro")
 
       .empty-state(v-else)
         .fa.fa-file-code-o
         p No macros configured yet.
-        bbutton(@click="add", icon="plus", text="Add Your First Macro")
+        bbutton(@click="add", icon="plus", text="Add Your First Macro",
+          :disabled="!$root.authorized")
 
       .help-section(v-if="macros.length")
         h3 Tips
@@ -166,13 +174,14 @@ script#view-macros-template(type="text/x-template")
         page, only macros from the selected tab will be shown.
 
       .tab-list(v-if="macro_tabs.length")
-        .tab-row(v-for="tab in macro_tabs", draggable="true",
+        .tab-row(v-for="tab in macro_tabs", :draggable="$root.authorized",
           @dragstart="tab_dragstart", @mousedown="tab_mousedown",
           @drag="tab_drag($index)", @dragover.prevent="",
           @drop.prevent="tab_drop($index)")
           .grip
 
           input.tab-name(v-model="tab.name", @change="change",
+            :disabled="!$root.authorized",
             title="Tab name displayed on control page", placeholder="Tab name")
 
           .tab-macro-count(title="Number of macros in this tab")
@@ -181,7 +190,7 @@ script#view-macros-template(type="text/x-template")
           .tab-actions
             .fa.fa-trash(@click="remove_tab($index)",
               :title="'Delete tab (macros will move to first tab)'",
-              :class="{disabled: macro_tabs.length <= 1}")
+              :class="{disabled: !$root.authorized || macro_tabs.length <= 1}")
 
       .help-section
         h3 How Tabs Work
@@ -213,11 +222,13 @@ script#view-macros-template(type="text/x-template")
           .col-confirm
             input(type="checkbox", :checked="requires_confirm(macro)",
               @change="toggle_confirm($index)",
+              :disabled="!$root.authorized",
               title="Require confirmation before running")
 
           .col-bypass
             input(type="checkbox", v-model="macro.skip_reference_check",
               @change="change",
+              :disabled="!$root.authorized",
               title="Allow running without position reference")
 
           .col-name {{macro.name || '(unnamed)'}}
