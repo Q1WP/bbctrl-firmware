@@ -176,7 +176,7 @@ script#view-macros-template(type="text/x-template")
             title="Tab name displayed on control page", placeholder="Tab name")
 
           .tab-macro-count(title="Number of macros in this tab")
-            {{count_macros_in_tab(tab.id)}} macros
+            | {{count_macros_in_tab(tab.id)}} macros
 
           .tab-actions
             .fa.fa-trash(@click="remove_tab($index)",
