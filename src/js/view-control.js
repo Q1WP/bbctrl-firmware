@@ -239,6 +239,77 @@ module.exports = {
     get_bounds() {return this.toolpath.bounds},
 
 
+    get_error_message(error, fallback) {
+      let xhr = error && error.xhr
+
+      if (xhr && xhr.response && xhr.response.message)
+        return xhr.response.message
+
+      if (xhr && xhr.responseText) {
+        try {
+          let response = JSON.parse(xhr.responseText)
+          if (response && response.message) return response.message
+        } catch (e) {}
+      }
+
+      if (xhr && xhr.statusText) return xhr.statusText
+      return fallback
+    },
+
+
+    get_motor_id(axis) {
+      let motors = this.config.motors || []
+
+      for (let i = 0; i < motors.length; i++) {
+        let motor = motors[i]
+        if ((motor.axis || '').toLowerCase() == axis) return i
+      }
+
+      return -1
+    },
+
+
+    get_missing_reference_axes() {
+      let missing = []
+      let motors = this.config.motors || []
+
+      for (let axis of 'xyzabc') {
+        let motor = this.get_motor_id(axis)
+        if (motor == -1) continue
+
+        let config = motors[motor]
+        if (!config.enabled) continue
+
+        let required = config['reference-required']
+        if (required == undefined || required == 'Auto')
+          required = axis == 'x' || axis == 'y' || axis == 'z'
+        else required = required == 'Yes'
+
+        if (required && !this.state[motor + 'referenced'])
+          missing.push(axis.toUpperCase())
+      }
+
+      return missing
+    },
+
+
+    format_reference_error(missing) {
+      if (missing.length == 1) {
+        let axis = missing[0]
+        return 'Cannot start: ' + axis + ' axis position is unknown. ' +
+          'Please home or zero the ' + axis + ' axis before running.'
+      }
+
+      if (missing.length == 2)
+        return 'Cannot start: ' + missing.join(' and ') +
+          ' axis positions are unknown. Please home or zero these axes ' +
+          'before running.'
+
+      return 'Cannot start: ' + missing.join(', ') + ' axis positions are ' +
+        'unknown. Please home or zero all axes before running.'
+    },
+
+
     goto(hash) {window.location.hash = hash},
     send(msg) {this.$dispatch('send', msg)},
     on_scroll(cm, e) {e.preventDefault()},
@@ -259,6 +330,14 @@ module.exports = {
           throw new Error('Invalid macro index: ' + index)
 
         let config = macros[index]
+        if (!config.skip_reference_check) {
+          let missing = this.get_missing_reference_axes()
+          if (missing.length) {
+            await this.$root.error_dialog(this.format_reference_error(missing))
+            return
+          }
+        }
+
         if (config.confirm !== false) {
           let name = config.name || ('Macro ' + (index + 1))
           let result = await this.$root.open_dialog({
@@ -274,9 +353,11 @@ module.exports = {
           if (result != 'run') return
         }
 
-        return this.$api.put('macro/' + (index + 1))
-      } catch (e) {
-        this.$root.error_dialog('Failed to run macro:\n' + e)
+        await this.$api.put('macro/' + (index + 1), undefined, {error() {}})
+
+      } catch (error) {
+        await this.$root.error_dialog('Failed to run macro.\n' +
+          this.get_error_message(error, 'Unable to start macro.'))
       }
     },
 
